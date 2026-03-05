@@ -3,35 +3,27 @@ const Student = require('../models/Student');
 const Registration = require('../models/Registration');
 const jwt = require('jsonwebtoken');
 
-// Generate JWT for student
+// Helper to generate JWT
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: '30d',
     });
 };
 
-// Helper to set token in cookie
+// Helper to send token in response body (for cross-domain Bearer token auth)
 const sendTokenResponse = (student, statusCode, res) => {
     const token = generateToken(student._id);
 
-    const options = {
-        expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-    };
-
-    res.status(statusCode)
-        .cookie('studentToken', token, options)
-        .json({
-            success: true,
-            _id: student._id,
-            name: student.name,
-            email: student.email,
-            rollNumber: student.rollNumber,
-            department: student.department,
-            year: student.year
-        });
+    res.status(statusCode).json({
+        success: true,
+        token,
+        _id: student._id,
+        name: student.name,
+        email: student.email,
+        rollNumber: student.rollNumber,
+        department: student.department,
+        year: student.year
+    });
 };
 
 // @desc    Register a new student
@@ -102,10 +94,7 @@ const getStudentMe = async (req, res) => {
 // @route   GET /api/public/logout
 // @access  Private (Student)
 const studentLogout = async (req, res) => {
-    res.cookie('studentToken', 'none', {
-        expires: new Date(Date.now() + 10 * 1000),
-        httpOnly: true,
-    });
+    // Token is stored client-side in localStorage — client handles removal
     res.status(200).json({ success: true, message: 'Logged out' });
 };
 

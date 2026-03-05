@@ -7,35 +7,43 @@ export const StudentAuthProvider = ({ children }) => {
     const [student, setStudent] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const checkAuth = async () => {
-        try {
-            const res = await api.get('/public/me');
-            setStudent(res.data);
-        } catch (err) {
-            setStudent(null);
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // On mount, restore student from localStorage if token exists
     useEffect(() => {
-        checkAuth();
+        const token = localStorage.getItem('studentToken');
+        const stored = localStorage.getItem('studentData');
+        if (token && stored) {
+            try {
+                setStudent(JSON.parse(stored));
+            } catch {
+                localStorage.removeItem('studentToken');
+                localStorage.removeItem('studentData');
+            }
+        }
+        setLoading(false);
     }, []);
+
+    const saveSession = (data) => {
+        const { token, ...studentData } = data;
+        localStorage.setItem('studentToken', token);
+        localStorage.setItem('studentData', JSON.stringify(studentData));
+        setStudent(studentData);
+    };
 
     const signup = async (studentData) => {
         const response = await api.post('/public/signup', studentData);
-        setStudent(response.data);
+        saveSession(response.data);
         return response.data;
     };
 
     const login = async (identifier, password) => {
         const response = await api.post('/public/login', { identifier, password });
-        setStudent(response.data);
+        saveSession(response.data);
         return response.data;
     };
 
-    const logout = async () => {
-        await api.get('/public/logout');
+    const logout = () => {
+        localStorage.removeItem('studentToken');
+        localStorage.removeItem('studentData');
         setStudent(null);
     };
 
